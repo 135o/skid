@@ -17,7 +17,7 @@ local function findBall()
 		return ball:IsA("BasePart") and ball:GetAttribute("realBall")
 	end
 	local isWaiting = localPlayer.Team and localPlayer.Team.Name == "Waiting"
-	local onlyTrainingBalls = getgenv().useTrainingBalls and isWaiting
+	local onlyTrainingBalls = getgenv().Settings.useTrainingBalls and isWaiting
 	local folder = workspace:FindFirstChild(onlyTrainingBalls and "TrainingBalls" or "Balls")
 	if folder then
 		for _, ball in ipairs(folder:GetChildren()) do
@@ -45,7 +45,7 @@ local function setUpBallConnection(folder)
 	end)
 end
 
-setUpBallConnection(workspace:FindFirstChild(getgenv().useTrainingBalls and "TrainingBalls" or "Balls"))
+setUpBallConnection(workspace:FindFirstChild(getgenv().Settings.useTrainingBalls and "TrainingBalls" or "Balls"))
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "DebugUI_" .. HttpService:GenerateGUID(false)
