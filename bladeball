@@ -1,5 +1,5 @@
 getgenv().debuginfo = getgenv().debuginfo or true
-getgenv().trainingballs = getgenv().trainingballs or true
+getgenv().trainingballs = getgenv().trainingballs or false
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
