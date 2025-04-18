@@ -1,5 +1,5 @@
-getgenv().debugUI = getgenv().Settings.debugUI or true
-getgenv().useTrainingBalls = getgenv().Settings.useTrainingBalls or false
+getgenv().Settings.debugUI = getgenv().Settings.debugUI or true
+getgenv().Settings.useTrainingBalls = getgenv().Settings.useTrainingBalls or false
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
