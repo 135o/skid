@@ -1,4 +1,10 @@
+local hasExecuted = false  -- Boolean flag to track if the script has been executed
+
 local function text(message)
+    if hasExecuted then
+        return  -- Skip if already executed
+    end
+    
     local coreGui = game:GetService("CoreGui")
     local guis = coreGui:GetChildren()
     local s = nil
@@ -44,6 +50,7 @@ local function text(message)
         tweenOut.Completed:Connect(function()
             label:Destroy()
             blur:Destroy()
+            hasExecuted = true  -- Mark as executed after the text disappears
         end)
     end)
 end
@@ -55,8 +62,12 @@ local success, info = pcall(function()
 end)
 
 if game.PlaceId == 13772394625 then
-    text(info.Name)
+    if not hasExecuted then  -- Check if script has already been executed
+        text(info.Name)
+    end
     loadstring(game:HttpGet("https://raw.githubusercontent.com/135o/skid/refs/heads/main/bladeball"))()
 else
-    text("unsupported")
+    if not hasExecuted then  -- Check if script has already been executed
+        text("unsupported")
+    end
 end
