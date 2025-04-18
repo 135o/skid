@@ -118,7 +118,7 @@ RunService.PreSimulation:Connect(function(dt)
 	local acceleration = (ball.AssemblyLinearVelocity - velocity)
 	local lookaheadTime = 0.17
 
-	local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 4)
+	local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 1.25)
 	local predictedDistance = (predictedPosition - hrp.Position).Magnitude
 
 	local baseRange = math.log(speed + 1) * 6
