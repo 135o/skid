@@ -8,13 +8,13 @@ RunService.PreSimulation:Connect(function(dt)
     local currentPosition = ball.Position
     local acceleration = ball.AssemblyLinearVelocity - velocity
     
-    local lookaheadTime = math.clamp(0.1 + speed / 200, 0.1, 0.5)
+    local lookaheadTime = math.clamp(0.2 + speed / 150, 0.2, 0.7)  -- Increased lookahead time to allow for later predictions
 
     local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 2)
     local predictedDistance = (predictedPosition - hrp.Position).Magnitude
 
     local baseRange = math.log(speed + 1) * 6
-    local parryRange = math.clamp(baseRange, 10, 200)
+    local parryRange = math.clamp(baseRange, 10, 150)  -- Adjusted parry range for more controlled timing
 
     debugSphere.Position = hrp.Position
     debugSphere.Size = Vector3.new(parryRange * 2, parryRange * 2, parryRange * 2)
