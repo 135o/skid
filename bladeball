@@ -7,20 +7,25 @@ RunService.PreSimulation:Connect(function(dt)
     local speed = velocity.Magnitude
     local currentPosition = ball.Position
     local acceleration = ball.AssemblyLinearVelocity - velocity
-    
-    local lookaheadTime = math.clamp(0.2 + speed / 150, 0.2, 0.7)  -- Increased lookahead time to allow for later predictions
 
+    -- Calculate dynamic lookahead time based on speed and distance
+    local distanceToPlayer = (currentPosition - hrp.Position).Magnitude
+    local lookaheadTime = math.clamp(distanceToPlayer / (speed + 10), 0.2, 0.5)  -- Calculate time based on distance and speed
+
+    -- Predicted position using a more refined prediction
     local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 2)
     local predictedDistance = (predictedPosition - hrp.Position).Magnitude
 
-    local baseRange = math.log(speed + 1) * 6
-    local parryRange = math.clamp(baseRange, 10, 150)  -- Adjusted parry range for more controlled timing
+    -- Dynamic parry range based on speed and distance
+    local parryRange = math.clamp(speed * 0.75, 10, 150)  -- Adjust parry range based on speed (more dynamic)
 
+    -- Visualize the parry range
     debugSphere.Position = hrp.Position
     debugSphere.Size = Vector3.new(parryRange * 2, parryRange * 2, parryRange * 2)
 
     local targetName = ball:GetAttribute("target")
 
+    -- Update UI labels
     labels.Velocity.Text = "Velocity: " .. string.format("%.0f", speed)
     labels.Scale.Text = "Scale: " .. string.format("%.0f", parryRange)
     labels.Distance.Text = "Distance: " .. string.format("%.0f", predictedDistance)
@@ -28,10 +33,10 @@ RunService.PreSimulation:Connect(function(dt)
     labels.PlayerPos.Text = "PlayerPos: " .. formatVector3(hrp.Position)
     labels.Target.Text = "Target: " .. (targetName or "N/A")
 
+    -- Check if the ball is within parry range and attempt to parry if the target is the player
     if targetName == localPlayer.Name and not isParried and predictedDistance <= parryRange then
-        local mousePos = Vector2.new(0, 0)
-        VirtualInputManager:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, true, game, 0)
-        VirtualInputManager:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, false, game, 0)
+        VirtualInputManager:SendMouseButtonEvent(0,0, 0, true, game, 0)
+        VirtualInputManager:SendMouseButtonEvent(0,0, 0, false, game, 0)
         isParried = true
     end
 end)
