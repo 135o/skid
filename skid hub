@@ -1,10 +1,11 @@
 local hasExecuted = false 
-print("ijected")
+print("injected")
+
 local function text(message)
     if hasExecuted then
         return  -- Skip if already executed
     end
-    
+
     local coreGui = game:GetService("CoreGui")
     local guis = coreGui:GetChildren()
     local s = nil
@@ -65,9 +66,14 @@ if game.PlaceId == 13772394625 then
     if not hasExecuted then  -- Check if script has already been executed
         text(info.Name)
     end
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/135o/skid/refs/heads/main/bladeball"))()
+    -- Ensure `hasExecuted` is set properly after the script loads
+    if not hasExecuted then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/135o/skid/refs/heads/main/bladeball"))()
+        hasExecuted = true  -- Mark as executed after the external script is loaded
+    end
 else
     if not hasExecuted then  -- Check if script has already been executed
         text("unsupported")
+        hasExecuted = true  -- Mark as executed if unsupported
     end
 end
