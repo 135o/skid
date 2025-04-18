@@ -1,5 +1,5 @@
-getgenv().Debug = getgenv().Settings.Debug
-getgenv().useTrainingBalls = getgenv().Settings.useTrainingBalls
+getgenv().debugUI = getgenv().Settings.debugUI or true
+getgenv().useTrainingBalls = getgenv().Settings.useTrainingBalls or false
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -59,10 +59,11 @@ background.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 background.BackgroundTransparency = 0.45
 background.AnchorPoint = Vector2.new(0, 0)
 background.Parent = screenGui
-background.Visible = getgenv().Debug
+background.Visible = getgenv().Settings.debugUI
 
+-- Add a small UICorner to the debug UI
 local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 8)
+uiCorner.CornerRadius = UDim.new(0, 8)  -- Smaller radius for the corners
 uiCorner.Parent = background
 
 local function createTextLabel(name, yOffset, text)
@@ -78,7 +79,7 @@ local function createTextLabel(name, yOffset, text)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.RichText = true
 	label.Text = text or ""
-	label.Visible = getgenv().Debug
+	label.Visible = getgenv().Settings.debugUI
 	label.Parent = background
 	return label
 end
@@ -108,44 +109,38 @@ local function formatVector3(vec)
 end
 
 RunService.PreSimulation:Connect(function(dt)
-    local ball = findBall()
-    local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not ball or not hrp then return end
+	local ball = findBall()
+	local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not ball or not hrp then return end
 
-    local velocity = ball.zoomies.VectorVelocity
-    local speed = velocity.Magnitude
-    local currentPosition = ball.Position
-    local acceleration = ball.AssemblyLinearVelocity - velocity
+	local velocity = ball.zoomies.VectorVelocity
+	local speed = velocity.Magnitude
+	local currentPosition = ball.Position
+	local acceleration = (ball.AssemblyLinearVelocity - velocity)
+	local lookaheadTime = 0.17
 
-    -- Calculate dynamic lookahead time based on speed and distance
-    local distanceToPlayer = (currentPosition - hrp.Position).Magnitude
-    local lookaheadTime = math.clamp(distanceToPlayer / (speed + 10), 0.2, 0.5)  -- Calculate time based on distance and speed
+	local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 2)
+	local predictedDistance = (predictedPosition - hrp.Position).Magnitude
 
-    -- Predicted position using a more refined prediction
-    local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 2)
-    local predictedDistance = (predictedPosition - hrp.Position).Magnitude
+	local baseRange = math.log(speed + 1) * 5
+	local parryRange = math.clamp(baseRange, 10, 200)
 
-    -- Dynamic parry range based on speed and distance
-    local parryRange = math.clamp(speed * 0.75, 10, 150)  -- Adjust parry range based on speed (more dynamic)
+	debugSphere.Position = hrp.Position
+	debugSphere.Size = Vector3.new(parryRange * 2, parryRange * 2, parryRange * 2)
 
-    -- Visualize the parry range
-    debugSphere.Position = hrp.Position
-    debugSphere.Size = Vector3.new(parryRange * 2, parryRange * 2, parryRange * 2)
+	local targetName = ball:GetAttribute("target")
 
-    local targetName = ball:GetAttribute("target")
+	labels.Velocity.Text = "Velocity: " .. string.format("%.0f", speed)
+	labels.Scale.Text = "Scale: " .. string.format("%.0f", parryRange)
+	labels.Distance.Text = "Distance: " .. string.format("%.0f", predictedDistance)
+	labels.BallPos.Text = "BallPos: " .. formatVector3(currentPosition)
+	labels.PlayerPos.Text = "PlayerPos: " .. formatVector3(hrp.Position)
+	labels.Target.Text = "Target: " .. (targetName or "N/A")
 
-    -- Update UI labels
-    labels.Velocity.Text = "Velocity: " .. string.format("%.0f", speed)
-    labels.Scale.Text = "Scale: " .. string.format("%.0f", parryRange)
-    labels.Distance.Text = "Distance: " .. string.format("%.0f", predictedDistance)
-    labels.BallPos.Text = "BallPos: " .. formatVector3(currentPosition)
-    labels.PlayerPos.Text = "PlayerPos: " .. formatVector3(hrp.Position)
-    labels.Target.Text = "Target: " .. (targetName or "N/A")
-
-    -- Check if the ball is within parry range and attempt to parry if the target is the player
-    if targetName == localPlayer.Name and not isParried and predictedDistance <= parryRange then
-        VirtualInputManager:SendMouseButtonEvent(0,0, 0, true, game, 0)
-        VirtualInputManager:SendMouseButtonEvent(0,0, 0, false, game, 0)
-        isParried = true
-    end
+	if targetName == localPlayer.Name and not isParried and predictedDistance <= parryRange then
+		local mousePos = UserInputService:GetMouseLocation()
+		VirtualInputManager:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, true, game, 0)
+		VirtualInputManager:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, false, game, 0)
+		isParried = true
+	end
 end)
