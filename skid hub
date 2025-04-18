@@ -1,5 +1,5 @@
-local hasExecuted = false  -- Boolean flag to track if the script has been executed
-
+local hasExecuted = false 
+print("ijected")
 local function text(message)
     if hasExecuted then
         return  -- Skip if already executed
