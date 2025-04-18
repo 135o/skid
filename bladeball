@@ -121,7 +121,7 @@ RunService.PreSimulation:Connect(function(dt)
 	local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 2)
 	local predictedDistance = (predictedPosition - hrp.Position).Magnitude
 
-	local baseRange = math.log(speed + 1) * 5
+	local baseRange = math.log(speed + 1) * 2
 	local parryRange = math.clamp(baseRange, 10, 200)
 
 	debugSphere.Position = hrp.Position
