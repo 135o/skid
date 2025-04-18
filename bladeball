@@ -1,3 +1,112 @@
+getgenv().Debug = getgenv().Settings.Debug
+getgenv().useTrainingBalls = getgenv().Settings.useTrainingBalls
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+
+local localPlayer = Players.LocalPlayer
+local isParried = false
+local targetConnection = nil
+
+local function findBall()
+	local function isValidBall(ball)
+		return ball:IsA("BasePart") and ball:GetAttribute("realBall")
+	end
+	local isWaiting = localPlayer.Team and localPlayer.Team.Name == "Waiting"
+	local onlyTrainingBalls = getgenv().Settings.useTrainingBalls and isWaiting
+	local folder = workspace:FindFirstChild(onlyTrainingBalls and "TrainingBalls" or "Balls")
+	if folder then
+		for _, ball in ipairs(folder:GetChildren()) do
+			if isValidBall(ball) then return ball end
+		end
+	end
+end
+
+local function resetConnection()
+	if targetConnection then
+		targetConnection:Disconnect()
+		targetConnection = nil
+	end
+end
+
+local function setUpBallConnection(folder)
+	if not folder then return end
+	folder.ChildAdded:Connect(function()
+		local ball = findBall()
+		if not ball then return end
+		resetConnection()
+		targetConnection = ball:GetAttributeChangedSignal("target"):Connect(function()
+			isParried = false
+		end)
+	end)
+end
+
+setUpBallConnection(workspace:FindFirstChild(getgenv().Settings.useTrainingBalls and "TrainingBalls" or "Balls"))
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DebugUI_" .. HttpService:GenerateGUID(false)
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui
+
+local background = Instance.new("Frame")
+background.Size = UDim2.new(0, 400, 0, 260)
+background.Position = UDim2.new(0, 10, 0, 10)
+background.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+background.BackgroundTransparency = 0.45
+background.AnchorPoint = Vector2.new(0, 0)
+background.Parent = screenGui
+background.Visible = getgenv().Debug
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 8)
+uiCorner.Parent = background
+
+local function createTextLabel(name, yOffset, text)
+	local label = Instance.new("TextLabel")
+	label.Name = name
+	label.Size = UDim2.new(0, 400, 0, 18)
+	label.Position = UDim2.new(0, 10, 0, yOffset)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextStrokeTransparency = 0.7
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.RichText = true
+	label.Text = text or ""
+	label.Visible = getgenv().Debug
+	label.Parent = background
+	return label
+end
+
+local labels = {
+	Velocity = createTextLabel("Velocity", 20),
+	Scale = createTextLabel("Scale", 40),
+	Distance = createTextLabel("Distance", 60),
+	Target = createTextLabel("Target", 80),
+	BallPos = createTextLabel("BallPos", 100),
+	PlayerPos = createTextLabel("PlayerPos", 120)
+}
+
+local debugSphere = Instance.new("Part")
+debugSphere.Shape = Enum.PartType.Ball
+debugSphere.Material = Enum.Material.Neon
+debugSphere.Anchored = true
+debugSphere.CanCollide = false
+debugSphere.Transparency = 0.9
+debugSphere.Color = Color3.fromRGB(255, 0, 0)
+debugSphere.Size = Vector3.new(1, 1, 1)
+debugSphere.Name = "ParryRangeVisualizer"
+debugSphere.Parent = workspace
+
+local function formatVector3(vec)
+	return string.format("X: %.0f, Y: %.0f, Z: %.0f", vec.X, vec.Y, vec.Z)
+end
+
 RunService.PreSimulation:Connect(function(dt)
     local ball = findBall()
     local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
