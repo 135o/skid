@@ -1,72 +1,52 @@
-getgenv().debuginfo = getgenv().debuginfo or true
-getgenv().trainingballs = getgenv().trainingballs or false
+getgenv().debugUI = getgenv().debugUI or true
+getgenv().useTrainingBalls = getgenv().useTrainingBalls or false
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
-local TweenService = game:GetService("TweenService")
 
-local LocalPlayer = Players.LocalPlayer
-local Cooldown = 0
-local Parried = false
-local TargetConnection = nil
-local lastWins = LocalPlayer:GetAttribute("PlayerWins") or 0
-local function GetBall()
-	local function validBall(ball)
+local localPlayer = Players.LocalPlayer
+local isParried = false
+local targetConnection = nil
+
+local function findBall()
+	local function isValidBall(ball)
 		return ball:IsA("BasePart") and ball:GetAttribute("realBall")
 	end
-
-	local teamIsWaiting = LocalPlayer.Team and LocalPlayer.Team.Name == "Waiting"
-	local useTrainingOnly = getgenv().trainingballs and teamIsWaiting
-
-	if useTrainingOnly then
-		local trainingBalls = workspace:FindFirstChild("TrainingBalls")
-		if trainingBalls then
-			for _, ball in ipairs(trainingBalls:GetChildren()) do
-				if validBall(ball) then return ball end
-			end
-		end
-	else
-		local balls = workspace:FindFirstChild("Balls")
-		if balls then
-			for _, ball in ipairs(balls:GetChildren()) do
-				if validBall(ball) then return ball end
-			end
+	local isWaiting = localPlayer.Team and localPlayer.Team.Name == "Waiting"
+	local onlyTrainingBalls = getgenv().useTrainingBalls and isWaiting
+	local folder = workspace:FindFirstChild(onlyTrainingBalls and "TrainingBalls" or "Balls")
+	if folder then
+		for _, ball in ipairs(folder:GetChildren()) do
+			if isValidBall(ball) then return ball end
 		end
 	end
 end
 
-
-local function ResetConnection()
-	if TargetConnection then
-		TargetConnection:Disconnect()
-		TargetConnection = nil
+local function resetConnection()
+	if targetConnection then
+		targetConnection:Disconnect()
+		targetConnection = nil
 	end
 end
 
--- Watch both ball folders
-local function setupBallConnection(folder)
+local function setUpBallConnection(folder)
 	if not folder then return end
 	folder.ChildAdded:Connect(function()
-		local ball = GetBall()
+		local ball = findBall()
 		if not ball then return end
-		ResetConnection()
-		TargetConnection = ball:GetAttributeChangedSignal("target"):Connect(function()
-			Parried = false
+		resetConnection()
+		targetConnection = ball:GetAttributeChangedSignal("target"):Connect(function()
+			isParried = false
 		end)
 	end)
 end
 
--- Watch the appropriate folder(s)
-if getgenv().trainingballs and LocalPlayer.Team and LocalPlayer.Team.Name == "Waiting" then
-	setupBallConnection(workspace:FindFirstChild("TrainingBalls"))
-else
-	setupBallConnection(workspace:FindFirstChild("Balls"))
-end
+setUpBallConnection(workspace:FindFirstChild(getgenv().useTrainingBalls and "TrainingBalls" or "Balls"))
 
--- UI Setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "DebugUI_" .. HttpService:GenerateGUID(false)
 screenGui.ResetOnSpawn = false
@@ -76,40 +56,17 @@ local background = Instance.new("Frame")
 background.Size = UDim2.new(0, 400, 0, 260)
 background.Position = UDim2.new(0, 10, 0, 10)
 background.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-background.BackgroundTransparency = 0.55
+background.BackgroundTransparency = 0.45
 background.AnchorPoint = Vector2.new(0, 0)
 background.Parent = screenGui
-background.Visible = getgenv().debuginfo
+background.Visible = getgenv().debugUI
 
+-- Add a small UICorner to the debug UI
 local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 12)
+uiCorner.CornerRadius = UDim.new(0, 8)  -- Smaller radius for the corners
 uiCorner.Parent = background
 
--- Drag UI
-local dragging, dragStart, startPos
-background.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = background.Position
-	end
-end)
-
-background.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-	end
-end)
-
-background.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStart
-		background.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
-end)
-
--- UI Labels
-local function createLabel(name, yOffset, text)
+local function createTextLabel(name, yOffset, text)
 	local label = Instance.new("TextLabel")
 	label.Name = name
 	label.Size = UDim2.new(0, 400, 0, 18)
@@ -122,119 +79,68 @@ local function createLabel(name, yOffset, text)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.RichText = true
 	label.Text = text or ""
-	label.Visible = getgenv().debuginfo
+	label.Visible = getgenv().debugUI
 	label.Parent = background
 	return label
 end
 
 local labels = {
-	Header = createLabel("Header", 0),
-	Velocity = createLabel("Velocity", 20),
-	Scale = createLabel("Scale", 40),
-	Distance = createLabel("Distance", 60),
-	Target = createLabel("Target", 80),
-	BallPos = createLabel("BallPos", 100),
-	PlayerPos = createLabel("PlayerPos", 120),
-	TargetPos = createLabel("TargetPos", 140),
-	Device = createLabel("Device", 160),
-	Sword = createLabel("Sword", 180),
-	Wins = createLabel("Wins", 200),
-	Kills = createLabel("Kills", 220),
+	Velocity = createTextLabel("Velocity", 20),
+	Scale = createTextLabel("Scale", 40),
+	Distance = createTextLabel("Distance", 60),
+	Target = createTextLabel("Target", 80),
+	BallPos = createTextLabel("BallPos", 100),
+	PlayerPos = createTextLabel("PlayerPos", 120)
 }
 
-local function typewriter(label, fullText, delay)
-	task.spawn(function()
-		label.TextColor3 = Color3.fromRGB(0, 255, 255)
-		label.Text = ""
-		for i = 1, #fullText do
-			label.Text = fullText:sub(1, i)
-			task.wait(delay)
-		end
-	end)
-end
-
-task.defer(function()
-	local headerText = " Info | " .. LocalPlayer.DisplayName .. " (" .. LocalPlayer.UserId .. ")"
-	typewriter(labels.Header, headerText, 0.05)
-end)
+local debugSphere = Instance.new("Part")
+debugSphere.Shape = Enum.PartType.Ball
+debugSphere.Material = Enum.Material.Neon
+debugSphere.Anchored = true
+debugSphere.CanCollide = false
+debugSphere.Transparency = 0.9
+debugSphere.Color = Color3.fromRGB(255, 0, 0)
+debugSphere.Size = Vector3.new(1, 1, 1)
+debugSphere.Name = "ParryRangeVisualizer"
+debugSphere.Parent = workspace
 
 local function formatVector3(vec)
 	return string.format("X: %.0f, Y: %.0f, Z: %.0f", vec.X, vec.Y, vec.Z)
 end
 
--- Main Loop
 RunService.PreSimulation:Connect(function(dt)
-	local ball = GetBall()
-	local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	local ball = findBall()
+	local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not ball or not hrp then return end
 
 	local velocity = ball.zoomies.VectorVelocity
 	local speed = velocity.Magnitude
-	local anticipatedPosition = ball.Position + (velocity * dt)
-	local distance = (hrp.Position - anticipatedPosition).Magnitude
-	local parryRange = math.clamp(speed / 3.300053, 5.50525, 200)
+	local currentPosition = ball.Position
+	local acceleration = (ball.AssemblyLinearVelocity - velocity)
+	local lookaheadTime = 0.17
+
+	local predictedPosition = currentPosition + (velocity * lookaheadTime) + (0.5 * acceleration * lookaheadTime ^ 2)
+	local predictedDistance = (predictedPosition - hrp.Position).Magnitude
+
+	local baseRange = math.log(speed + 1) * 5
+	local parryRange = math.clamp(baseRange, 10, 200)
+
+	debugSphere.Position = hrp.Position
+	debugSphere.Size = Vector3.new(parryRange * 2, parryRange * 2, parryRange * 2)
 
 	local targetName = ball:GetAttribute("target")
-	local targetPlayer = Players:FindFirstChild(targetName)
-	local targetHRP = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
 
-	-- UI Updates
 	labels.Velocity.Text = "Velocity: " .. string.format("%.0f", speed)
 	labels.Scale.Text = "Scale: " .. string.format("%.0f", parryRange)
-	labels.Distance.Text = "Distance: " .. string.format("%.0f", distance)
-	labels.BallPos.Text = "BallPos: " .. formatVector3(ball.Position)
+	labels.Distance.Text = "Distance: " .. string.format("%.0f", predictedDistance)
+	labels.BallPos.Text = "BallPos: " .. formatVector3(currentPosition)
 	labels.PlayerPos.Text = "PlayerPos: " .. formatVector3(hrp.Position)
-	labels.Device.Text = "Device: " .. (LocalPlayer:GetAttribute("Device") or "N/A")
-	labels.Sword.Text = "Sword: " .. (LocalPlayer:GetAttribute("CurrentlyEquippedSword") or "N/A")
 	labels.Target.Text = "Target: " .. (targetName or "N/A")
-	labels.TargetPos.Text = "TargetPos: " .. (targetHRP and formatVector3(targetHRP.Position) or "N/A")
 
-	local wins = LocalPlayer:GetAttribute("PlayerWins") or 0
-	local kills = LocalPlayer:GetAttribute("PlayerElims") or 0
-	labels.Wins.Text = "Wins: " .. wins
-	labels.Kills.Text = "Kills: " .. kills
-
-	-- UI coloring
-	labels.Target.TextColor3 = (targetName == LocalPlayer.Name) and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 255)
-	labels.Scale.TextColor3 = (parryRange == 200) and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 255)
-	labels.Velocity.TextColor3 = speed > 500 and Color3.fromRGB(255, 0, 0) or speed > 200 and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(255, 255, 255)
-	labels.BallPos.TextColor3 = (ball.Position - hrp.Position).Magnitude < 50 and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 255, 255)
-
-	-- Auto-Parry
-	if targetName == LocalPlayer.Name and not Parried and distance <= parryRange then
-		VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-		Parried = true
-		Cooldown = tick()
-	end
-
-	if Parried and (tick() - Cooldown) >= 5 then
-		Parried = false
-	end
-
-	-- Win Popup
-	if wins ~= lastWins then
-		local diff = wins - lastWins
-		local changeLabel = Instance.new("TextLabel")
-		changeLabel.Size = UDim2.new(0, 100, 0, 18)
-		changeLabel.Position = UDim2.new(0, labels.Wins.Position.X.Offset + labels.Wins.Size.X.Offset + 10, 0, labels.Wins.Position.Y.Offset)
-		changeLabel.BackgroundTransparency = 1
-		changeLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-		changeLabel.TextStrokeTransparency = 0.7
-		changeLabel.Font = Enum.Font.SourceSans
-		changeLabel.TextSize = 14
-		changeLabel.Text = (diff > 0 and "+" or "") .. diff
-		changeLabel.Parent = background
-
-		local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		local tween = TweenService:Create(changeLabel, tweenInfo, {
-			Position = changeLabel.Position + UDim2.new(0, 0, 0, -20),
-			TextTransparency = 1
-		})
-		tween:Play()
-		tween.Completed:Connect(function()
-			changeLabel:Destroy()
-		end)
-
-		lastWins = wins
+	if targetName == localPlayer.Name and not isParried and predictedDistance <= parryRange then
+		local mousePos = UserInputService:GetMouseLocation()
+		VirtualInputManager:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, true, game, 0)
+		VirtualInputManager:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, false, game, 0)
+		isParried = true
 	end
 end)
