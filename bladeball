@@ -1,4 +1,4 @@
-getgenv().debugUI = getgenv().debugUI or true
+getgenv().Debug = getgenv().Debug or true
 getgenv().useTrainingBalls = getgenv().useTrainingBalls or false
 
 local RunService = game:GetService("RunService")
@@ -59,11 +59,10 @@ background.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 background.BackgroundTransparency = 0.45
 background.AnchorPoint = Vector2.new(0, 0)
 background.Parent = screenGui
-background.Visible = getgenv().debugUI
+background.Visible = getgenv().Debug
 
--- Add a small UICorner to the debug UI
 local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 8)  -- Smaller radius for the corners
+uiCorner.CornerRadius = UDim.new(0, 8)
 uiCorner.Parent = background
 
 local function createTextLabel(name, yOffset, text)
@@ -79,7 +78,7 @@ local function createTextLabel(name, yOffset, text)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.RichText = true
 	label.Text = text or ""
-	label.Visible = getgenv().debugUI
+	label.Visible = getgenv().Debug
 	label.Parent = background
 	return label
 end
