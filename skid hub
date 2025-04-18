@@ -1,1 +1,61 @@
-print("hey!")
+local function text(message)
+    local coreGui = game:GetService("CoreGui")
+    local guis = coreGui:GetChildren()
+    local s = nil
+
+    for _, gui in ipairs(guis) do
+        if gui:IsA("ScreenGui") then
+            s = gui
+            break
+        end
+    end
+
+    if not s then return end
+
+    local blur = Instance.new("BlurEffect")
+    blur.Size = 0
+    blur.Parent = game:GetService("Lighting")
+
+    local blurIn = game:GetService("TweenService"):Create(blur, TweenInfo.new(0.3), {Size = 24})
+    blurIn:Play()
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.5, 0, 0.1, 0)
+    label.Position = UDim2.new(0.25, 0, 0.45, 0)
+    label.Text = message
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextSize = 0
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextScaled = false
+    label.Parent = s
+
+    local tweenIn = game:GetService("TweenService"):Create(label, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextSize = 45})
+    tweenIn:Play()
+
+    tweenIn.Completed:Connect(function()
+        wait(1)
+        local tweenOut = game:GetService("TweenService"):Create(label, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextSize = 0})
+        tweenOut:Play()
+
+        local blurOut = game:GetService("TweenService"):Create(blur, TweenInfo.new(0.3), {Size = 0})
+        blurOut:Play()
+
+        tweenOut.Completed:Connect(function()
+            label:Destroy()
+            blur:Destroy()
+        end)
+    end)
+end
+
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local success, info = pcall(function()
+    return MarketplaceService:GetProductInfo(game.PlaceId)
+end)
+
+if game.PlaceId == 13772394625 then
+    text(info.Name)
+else
+    text("unsupported")
+end
