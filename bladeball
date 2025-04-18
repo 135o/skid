@@ -1,6 +1,5 @@
-getgenv().Settings.debugUI = getgenv().Settings.debugUI or true
-getgenv().Settings.useTrainingBalls = getgenv().Settings.useTrainingBalls or false
-
+getgenv().useTrainingBalls = getgenv().Settings.useTrainingBalls
+getgenv().Debug = getgenv().Settings.Debug
 
 print("loaded version 1")
 local RunService = game:GetService("RunService")
